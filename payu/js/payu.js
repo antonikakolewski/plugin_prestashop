@@ -3,7 +3,6 @@ openpayu.options = openpayu.options || {};
 
 $(document).ready(function () {
 	$('#payuRetryPayment').insertAfter($('.info-order').first());
-
 	$('body').on('click', '.payu-read-more', function () {
 		$(this).hide();
 		var elementToShow = $(this).data('more');
@@ -81,6 +80,7 @@ function doubleClickPrevent(object) {
 		document.querySelectorAll('.payu-payment-fieldset-1-6 .payment_module, .repayment-options').forEach(function (elm) {
 			validateBeforeSubmitCardForm();
 			validateBeforeSubmitGatewaysForm();
+			validateBeforeSubmitGooglePay();
 		});
 
 
@@ -116,6 +116,7 @@ function doubleClickPrevent(object) {
 		function validateBeforeSubmitCardForm() {
 			if($('.repayment-options').length > 0 && $('.repayment-options').hasClass('has-sf') && $('[name="payMethod"]').val() == 'card' || $('.repayment-options').length == 0) {
 				var paymentCardSubmit = document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"], #secure-form-pay');
+				console.log(paymentCardSubmit);
 				if (paymentCardSubmit !== null) {
 					paymentCardSubmit.addEventListener('click', function (e) {
 						if($('#card-form-container').is(':visible')) {
@@ -131,7 +132,20 @@ function doubleClickPrevent(object) {
 			}
 		}
 
+		function validateBeforeSubmitGooglePay() {
+			var paymentGooglePaySubmit = document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"], #google-pay-submit');
+			console.log(paymentGooglePaySubmit);
+			if(paymentGooglePaySubmit !== null) {
+            paymentGooglePaySubmit.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    payuGooglePayValidate();
 
+                    return false;
+                });
+			}
+        }
 		function payuGatewaysValidate() {
 			var validateResponse = document.getElementById('transfer-response-box');
 			var btn = document.querySelector('.pay-transfer-accept button');
@@ -188,6 +202,7 @@ function doubleClickPrevent(object) {
 				init_sf();
 				validateBeforeSubmitCardForm();
 				validateBeforeSubmitGatewaysForm();
+				validateBeforeSubmitGooglePay();
 			}, 4000)
 		});
 
@@ -239,6 +254,90 @@ function doubleClickPrevent(object) {
 			} catch (e) {
 				showMessageBox(e.message);
 			}
+		}
+
+		function payuGooglePayValidate(){
+			$('.payu-google-pay-error').slideUp(250);
+            if (!window.google?.payments?.api?.PaymentsClient) {
+                //show_error();
+                return false;
+            }
+            var googleToken = document.getElementById('payu-google-token');
+			console.log(googleToken.value);
+			if(googleToken.value === ''){
+                const paymentsClient =
+                    new google.payments.api.PaymentsClient({environment: env});
+
+                const isReadyToPayRequest = {
+                    apiVersion: 2,
+                    apiVersionMinor: 0,
+                    allowedPaymentMethods: [
+                        {
+                            type: 'CARD',
+                            parameters: {
+                                allowedAuthMethods: ['PAN_ONLY', 'CRYPTOGRAM_3DS'],
+                                allowedCardNetworks: ['MASTERCARD', 'VISA']
+                            }
+                        }
+                    ]
+                }
+
+                const paymentDataRequest = {
+                    apiVersion: 2,
+                    apiVersionMinor: 0,
+                    merchantInfo: {
+                        merchantName,
+                        merchantId,
+                    },
+                    allowedPaymentMethods: [
+                    {
+                        type: 'CARD',
+                        parameters: {
+                            allowedAuthMethods: ['PAN_ONLY', 'CRYPTOGRAM_3DS'],
+                            allowedCardNetworks: ['MASTERCARD', 'VISA'],
+                            billingAddressRequired: false
+                        },
+                        tokenizationSpecification: {
+                            type: 'PAYMENT_GATEWAY',
+                            parameters: {
+                                gateway: 'payu',
+                                gatewayMerchantId: posId
+                            }
+                        }
+                    }
+                    ],
+                    transactionInfo: {
+                        totalPriceStatus: 'FINAL',
+                        countryCode: 'PL',
+                        totalPrice,
+                        currencyCode: currency
+                    }
+                }
+                console.log(paymentDataRequest);
+                paymentsClient.isReadyToPay(isReadyToPayRequest)
+                    .then(function(response) {
+                        console.log('a');
+                        if (response.result) {
+                            console.log('b');
+                            paymentsClient.loadPaymentData(paymentDataRequest).then(function(paymentData){
+                                console.log('c');
+                                paymentToken = paymentData.paymentMethodData.tokenizationData.token;
+                                googleToken.value = btoa(paymentToken);
+                                document.getElementById('payu-google-pay-form').submit();
+                            }).catch(function(err){
+                                console.error(err);
+                                console.log('d');
+                            });
+                        }
+                    })
+                    .catch(function(err) {
+                        console.error(err);
+                        //show_error();
+                    });
+
+                return false;
+			}
+			else return true;
 		}
 	});
 })();

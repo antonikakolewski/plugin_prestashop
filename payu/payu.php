@@ -1237,23 +1237,15 @@ class PayU extends PaymentModule
                     'merchantName' => Configuration::get('PAYU_MERCHANT_NAME'),
                     'currency' => Currency::getCurrency($this->context->cart->id_currency)['iso_code']
                 ]);
-            if ($retry16) {
-                $cardPaymentOption = [
-                    'CallToActionText' => $this->l('Pay with Google Pay'),
-                    'AdditionalInformation' => $this->fetchTemplate('conditions17.tpl') . '<span class="payment-name" data-pm="ap"></span>',
-                    'ModuleName' => $this->name,
-                    'Logo' => $this->getPayuLogo('payu_google_pay.svg'),
-                ];
-            } else {
-                $cardPaymentOption = new PrestaShop\PrestaShop\Core\Payment\PaymentOption();
-                $cardPaymentOption->setCallToActionText($this->l('Pay with Google Pay'))
-                    ->setAdditionalInformation($this->fetchTemplate('googlePay17.tpl'))
+            if (!$retry16) {
+                $googlePayPaymentOption = new PrestaShop\PrestaShop\Core\Payment\PaymentOption();
+                $googlePayPaymentOption->setCallToActionText($this->l('Pay with Google Pay'))
+                    ->setAdditionalInformation($this->is17() ? $this->fetchTemplate('googlePay17.tpl') : $this->fetchTemplate('googlePay16.tpl'))
                     ->setModuleName($this->name)
                     ->setLogo($this->getPayuLogo('payu_google_pay.svg'))
                     ->setAction($this->context->link->getModuleLink($this->name, 'payment', ['payMethod' => 'ap']));
             }
-
-            $paymentOptions[] = $cardPaymentOption;
+            $paymentOptions[] = $googlePayPaymentOption;
         }
 
         if (Configuration::get('PAYU_SEPARATE_BLIK_PAYMENT') === '1' && $this->isBlikAvailable($totalPrice)) {
@@ -1447,6 +1439,14 @@ class PayU extends PaymentModule
                 'paymentMethods' => $paymentMethods['payByLinks'],
                 'modulePath' => _PS_MODULE_DIR_ . 'payu',
                 'posId' => OpenPayU_Configuration::getMerchantPosId(),
+                'googlePay' => [
+                    'posId' => OpenPayU_Configuration::getMerchantPosId(),
+                    'totalPrice' => $params['cart']->getOrderTotal(),
+                    'env' => Configuration::get('PAYU_SANDBOX') ? 'TEST' : 'PRODUCTION',
+                    'merchantId' => Configuration::get('PAYU_MERCHANT_ID'),
+                    'merchantName' => Configuration::get('PAYU_MERCHANT_NAME'),
+                    'currency' => Currency::getCurrency($this->context->cart->id_currency)['iso_code']
+                ],
                 'lang' => $this->context->language->iso_code,
                 'retryPayment' => false,
                 'jsSdk' => $this->getPayuUrl(Configuration::get('PAYU_SANDBOX') === '1') . 'javascript/sdk',

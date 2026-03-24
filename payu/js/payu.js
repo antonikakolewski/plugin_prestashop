@@ -116,7 +116,7 @@ function doubleClickPrevent(object) {
 		function validateBeforeSubmitCardForm() {
 			if($('.repayment-options').length > 0 && $('.repayment-options').hasClass('has-sf') && $('[name="payMethod"]').val() == 'card' || $('.repayment-options').length == 0) {
 				var paymentCardSubmit = document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"], #secure-form-pay');
-				console.log(paymentCardSubmit);
+
 				if (paymentCardSubmit !== null) {
 					paymentCardSubmit.addEventListener('click', function (e) {
 						if($('#card-form-container').is(':visible')) {
@@ -134,7 +134,7 @@ function doubleClickPrevent(object) {
 
 		function validateBeforeSubmitGooglePay() {
 			var paymentGooglePaySubmit = document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"], #google-pay-submit');
-			console.log(paymentGooglePaySubmit);
+
 			if(paymentGooglePaySubmit !== null) {
             paymentGooglePaySubmit.addEventListener('click', function(e) {
                     e.preventDefault();
@@ -263,7 +263,7 @@ function doubleClickPrevent(object) {
                 return false;
             }
             var googleToken = document.getElementById('payu-google-token');
-			console.log(googleToken.value);
+
 			if(googleToken.value === ''){
                 const paymentsClient =
                     new google.payments.api.PaymentsClient({environment: env});
@@ -313,20 +313,16 @@ function doubleClickPrevent(object) {
                         currencyCode: currency
                     }
                 }
-                console.log(paymentDataRequest);
+
                 paymentsClient.isReadyToPay(isReadyToPayRequest)
                     .then(function(response) {
-                        console.log('a');
                         if (response.result) {
-                            console.log('b');
                             paymentsClient.loadPaymentData(paymentDataRequest).then(function(paymentData){
-                                console.log('c');
                                 paymentToken = paymentData.paymentMethodData.tokenizationData.token;
                                 googleToken.value = btoa(paymentToken);
                                 document.getElementById('payu-google-pay-form').submit();
                             }).catch(function(err){
                                 console.error(err);
-                                console.log('d');
                             });
                         }
                     })

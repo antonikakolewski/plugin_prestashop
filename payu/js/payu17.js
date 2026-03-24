@@ -30,7 +30,7 @@ $(document).ready(function () {
 
                 var submitButton = document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"], #secure-form-pay');
 
-                submitButton.replaceWith(submitButton.cloneNode(true));
+                submitButton.removeEventListener('click', validate);
 
                 var paymentElementId = ev.target.id;
                 var paymentId = paymentElementId.replace('payment-option-', '');
@@ -84,6 +84,16 @@ $(document).ready(function () {
             }, true);
         });
 
+        function validate(e){
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+
+            payuGooglePayValidate();
+
+            return false;
+        }
+
         function validateBeforeSubmitCardForm() {
             document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"], #secure-form-pay')
                 .addEventListener('click', function (e) {
@@ -100,15 +110,16 @@ $(document).ready(function () {
 
         function validateBeforeSubmitGooglePay() {
             document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"]')
-                .addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
+                .addEventListener('click', validate);
+                //.addEventListener('click', function(e) {
+                    //e.preventDefault();
+                    //e.stopPropagation();
+                    //e.stopImmediatePropagation();
 
-                    payuGooglePayValidate();
+                    //payuGooglePayValidate();
 
-                    return false;
-                });
+                    //return false;
+                //});
         }
         function activatePaymentButton() {
             var paymentSubmit = document.querySelector('.pay-transfer-accept button');
@@ -389,14 +400,11 @@ $(document).ready(function () {
                         currencyCode: currency
                     }
                 }
-                console.log(paymentDataRequest);
+
                 paymentsClient.isReadyToPay(isReadyToPayRequest)
                     .then(function(response) {
-                        console.log('a');
                         if (response.result) {
-                            console.log('b');
                             paymentsClient.loadPaymentData(paymentDataRequest).then(function(paymentData){
-                                console.log('c');
                                 paymentToken = paymentData.paymentMethodData.tokenizationData.token;
                                 googleToken.value = btoa(paymentToken);
                                 if ($('.repayment-options').length > 0) {
@@ -406,7 +414,6 @@ $(document).ready(function () {
                                 }
                             }).catch(function(err){
                                 console.error(err);
-                                console.log('d');
                             });
                         }
                     })

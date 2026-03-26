@@ -30,7 +30,8 @@ $(document).ready(function () {
 
                 var submitButton = document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"], #secure-form-pay');
 
-                submitButton.removeEventListener('click', validate);
+                submitButton.removeEventListener('click', validateBeforeSubmitGooglePay);
+                submitButton.removeEventListener('click', validateBeforeSubmitCardForm);
 
                 var paymentElementId = ev.target.id;
                 var paymentId = paymentElementId.replace('payment-option-', '');
@@ -68,11 +69,13 @@ $(document).ready(function () {
                     var paymentIdElement = pwpofElement?.querySelector('input[name=payment_id]');
 
                 } else if (payment === 'card') {
-                    validateBeforeSubmitCardForm();
+                    document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"]')
+                        .addEventListener('click', validateBeforeSubmitCardForm);
 
                     var paymentIdElement = poaiElement?.querySelector('input[name=payment_id]');
                 } else if (payment === 'ap') {
-                    validateBeforeSubmitGooglePay();
+                    document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"]')
+                        .addEventListener('click', validateBeforeSubmitGooglePay);
 
                     var paymentIdElement = poaiElement?.querySelector('input[name=payment_id]');
                 }
@@ -84,7 +87,7 @@ $(document).ready(function () {
             }, true);
         });
 
-        function validate(e){
+        function validateBeforeSubmitGooglePay(e) {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -94,33 +97,17 @@ $(document).ready(function () {
             return false;
         }
 
-        function validateBeforeSubmitCardForm() {
-            document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"], #secure-form-pay')
-                .addEventListener('click', function (e) {
-                    if($('.pay-card-init').is(':visible')) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        e.stopImmediatePropagation();
+        function validateBeforeSubmitCardForm(e) {
+            if($('.pay-card-init').is(':visible')) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
 
-                        payuCardValidate();
-                    }
-                    return false;
-                });
+                payuCardValidate();
+            }
+            return false;
         }
 
-        function validateBeforeSubmitGooglePay() {
-            document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"]')
-                .addEventListener('click', validate);
-                //.addEventListener('click', function(e) {
-                    //e.preventDefault();
-                    //e.stopPropagation();
-                    //e.stopImmediatePropagation();
-
-                    //payuGooglePayValidate();
-
-                    //return false;
-                //});
-        }
         function activatePaymentButton() {
             var paymentSubmit = document.querySelector('.pay-transfer-accept button');
             if (paymentSubmit !== null) {
@@ -137,7 +124,6 @@ $(document).ready(function () {
 		        currentGateway.value = '';
 	        }
         }
-
 
         if (transferGateways.length > 0) {
             transferGateways.forEach(function (gateway) {
@@ -281,14 +267,13 @@ $(document).ready(function () {
 		    secureFormCvv.render(secureFormOptions.elementFormCvv);
 		    window.addEventListener('resize', secureFormResize);
 
-		    var responseBox = document.getElementById('response-box');
+		    var responseBoxSecureForm = document.getElementById('response-box');
 		    var cardTokenInput = document.getElementById('card-token');
 		}
 
-
         function payuCardValidate() {
 
-            hideMessageBox();
+            hideMessageBoxSecureForm();
             cardTokenInput.value = '';
             secureFormNumber.update({disabled: true});
             secureFormDate.update({disabled: true});
@@ -330,7 +315,7 @@ $(document).ready(function () {
                             errorMessage += '<strong>' + error.message + '<strong><br>';
                         });
 
-                        showMessageBox(errorMessage);
+                        showMessageBoxSecureForm(errorMessage);
 
                         secureFormNumber.update({disabled: false});
                         secureFormDate.update({disabled: false});
@@ -338,14 +323,14 @@ $(document).ready(function () {
                     }
                 });
             } catch (e) {
-                showMessageBox(e.message);
+                showMessageBoxSecureForm(e.message);
             }
         }
 
         function payuGooglePayValidate(){
-            $('.payu-google-pay-error').slideUp(250);
+            hideMessageBoxGooglePay();
             if (!window.google?.payments?.api?.PaymentsClient) {
-                //show_error();
+                showMessageBoxGooglePay(googlePayErrorMessage);
                 return false;
             }
 
@@ -419,7 +404,7 @@ $(document).ready(function () {
                     })
                     .catch(function(err) {
                         console.error(err);
-                        //show_error();
+                        showMessageBoxGooglePay(googlePayErrorMessage);
                     });
 
                 return false;
@@ -448,14 +433,26 @@ $(document).ready(function () {
             }
         }
 
-        function showMessageBox(message) {
-            responseBox.innerHTML = message;
-            responseBox.style.display = '';
+        function showMessageBoxSecureForm(message) {
+            responseBoxSecureForm.innerHTML = message;
+            responseBoxSecureForm.style.display = '';
         }
 
-        function hideMessageBox() {
-            responseBox.innerHTML = '';
-            responseBox.style.display = 'none';
+        var responseBoxGooglePay = document.getElementById('response-box-google-pay');
+
+        function showMessageBoxGooglePay(message) {
+            responseBoxGooglePay.innerHTML = message;
+            responseBoxGooglePay.style.display = '';
+        }
+
+        function hideMessageBoxGooglePay(){
+            responseBoxGooglePay.innerHTML = '';
+            responseBoxGooglePay.style.display = 'none';
+        }
+
+        function hideMessageBoxSecureForm() {
+            responseBoxSecureForm.innerHTML = '';
+            responseBoxSecureForm.style.display = 'none';
         }
     })
 })();

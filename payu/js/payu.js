@@ -208,7 +208,7 @@ function doubleClickPrevent(object) {
 
 		function payuCardValidate() {
 
-			hideMessageBox();
+			hideMessageBoxSecureForm();
 			window.cardTokenInput.value = '';
 			window.secureFormNumber.update({disabled: true});
 			window.secureFormDate.update({disabled: true});
@@ -244,7 +244,7 @@ function doubleClickPrevent(object) {
 							errorMessage += '<strong>' + error.message + '<strong><br>';
 						});
 
-						showMessageBox(errorMessage);
+						showMessageBoxSecureForm(errorMessage);
 
 						window.secureFormNumber.update({disabled: false});
 						window.secureFormDate.update({disabled: false});
@@ -252,14 +252,14 @@ function doubleClickPrevent(object) {
 					}
 				});
 			} catch (e) {
-				showMessageBox(e.message);
+				showMessageBoxSecureForm(e.message);
 			}
 		}
 
 		function payuGooglePayValidate(){
-			$('.payu-google-pay-error').slideUp(250);
+			hideMessageBoxGooglePay();
             if (!window.google?.payments?.api?.PaymentsClient) {
-                //show_error();
+                showMessageBoxGooglePay(googlePayErrorMessage);
                 return false;
             }
             var googleToken = document.getElementById('payu-google-token');
@@ -328,7 +328,7 @@ function doubleClickPrevent(object) {
                     })
                     .catch(function(err) {
                         console.error(err);
-                        //show_error();
+                        showMessageBoxGooglePay(googlePayErrorMessage);
                     });
 
                 return false;
@@ -427,14 +427,26 @@ function secureFormResize() {
 	}
 }
 
-function showMessageBox(message) {
-	var responseBox = document.getElementById('response-box');
-	responseBox.innerHTML = message;
-	responseBox.style.display = '';
+function showMessageBoxSecureForm(message) {
+	var responseBoxSecureForm = document.getElementById('response-box-secure-form');
+	responseBoxSecureForm.innerHTML = message;
+	responseBoxSecureForm.style.display = '';
 }
 
-function hideMessageBox() {
-	var responseBox = document.getElementById('response-box');
-	responseBox.innerHTML = '';
-	responseBox.style.display = 'none';
+function hideMessageBoxSecureForm() {
+	var responseBoxSecureForm = document.getElementById('response-box-secure-form');
+	responseBoxSecureForm.innerHTML = '';
+	responseBoxSecureForm.style.display = 'none';
+}
+
+function showMessageBoxGooglePay(message) {
+	var responseBoxGooglePay = document.getElementById('response-box-google-pay');
+    responseBoxGooglePay.innerHTML = message;
+    responseBoxGooglePay.style.display = '';
+}
+
+function hideMessageBoxGooglePay(){
+	var responseBoxGooglePay = document.getElementById('response-box-google-pay');
+    responseBoxGooglePay.innerHTML = '';
+    responseBoxGooglePay.style.display = 'none';
 }

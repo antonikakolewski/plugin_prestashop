@@ -12,6 +12,7 @@
     var posId = "{$posId}";
     var totalPrice = "{$totalPrice}";
     var currency = "{$currency}";
+    var googlePayErrorMessage = "{l s='This payment method is not available.' mod='payu'}";
 </script>
 <span class="payment-name" data-pm="ap"></span>
 {if !$retryPayment }
@@ -19,6 +20,11 @@
         <input type="hidden" name="payment_id" value="">
         <input type="hidden" name="payuGoogleToken" id="payu-google-token" value="">
         <input type="hidden" name="payMethod" value="ap">
+        {if isset($payMethods.error)}
+            <h4 class="error">{l s='Error has occurred' mod='payu'}: {$payMethods.error}</h4>
+        {else}
+            <div id="response-box-google-pay" class="alert alert-warning" style="display: none; margin-bottom: 10px"></div>
+        {/if}
         {include file='module:payu/views/templates/front/conditions17.tpl'}
     </form>
 {else}

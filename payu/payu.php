@@ -605,12 +605,12 @@ class PayU extends PaymentModule
                     ],
                     [
                         'type' => 'text',
-                        'label' => $this->l('Merchant Id'),
+                        'label' => $this->l('Google Merchant Id'),
                         'name' => 'PAYU_MERCHANT_ID'
                     ],
                     [
                         'type' => 'text',
-                        'label' => $this->l('Merchant Name'),
+                        'label' => $this->l('Google Merchant Name'),
                         'name' => 'PAYU_MERCHANT_NAME'
                     ]
                 ],

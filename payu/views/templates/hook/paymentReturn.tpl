@@ -21,12 +21,12 @@
             </div>
         </div>
         <h2 id="status-result-completed" style="display: none">{l s='Your payment was successful.' mod='payu'}</h2>
-        <h2 id="status-result-pending" style="display: none">{l s='Your payment failed.' mod='payu'}</h2>
-        <h2 id="status-result-canceled" style="display: none">{l s='Your payment is being processed.' mod='payu'}</h2>
+        <h2 id="status-result-pending" style="display: none">{l s='Your payment is being processed.' mod='payu'}</h2>
+        <h2 id="status-result-canceled" style="display: none">{l s='Your payment failed.' mod='payu'}</h2>
         <h2 id="status-result-error" style="display: none">{l s='Unknown Error' mod='payu'}</h2>
     {/if}
 </div>
 
 <script>
-    window.payu_get_status_url = '{$url|escape:'none'}';
+    window.payu_get_status_url = {$url|@json_encode nofilter};
 </script>

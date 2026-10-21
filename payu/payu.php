@@ -88,7 +88,7 @@ class PayU extends PaymentModule
             Configuration::updateValue('PAYU_PAYMENT_STATUS_CANCELED', $this->addNewOrderState('PAYU_PAYMENT_STATUS_CANCELED',
                 ['en' => 'PayU payment canceled', 'pl' => 'Płatność PayU anulowana', 'cs' => 'Transakce PayU zrušena'])) &&
             Configuration::updateValue('PAYU_PAYMENT_STATUS_COMPLETED', 2) &&
-            Configuration::updateValue('PAYU_PAYMENT_SHOW_STATUS', 1) &&
+            Configuration::updateValue('PAYU_PAYMENT_SHOW_STATUS', $this->is17() ? 1 : 0) &&
             Configuration::updateValue('PAYU_REPAY', 0) &&
             Configuration::updateValue('PAYU_SANDBOX', 0) &&
             Configuration::updateValue('PAYU_LOGGER', 0) &&
@@ -398,7 +398,7 @@ class PayU extends PaymentModule
                             ]
                         ],
                     ],
-                    [
+                    $this->is17() ? [
                         'type' => 'switch',
                         'label' => $this->l('Show status info after payment'),
                         'name' => 'PAYU_PAYMENT_SHOW_STATUS',
@@ -414,7 +414,7 @@ class PayU extends PaymentModule
                                 'label' => $this->l('Disabled')
                             ]
                         ]
-                    ]
+                    ] : []
                 ],
                 'submit' => [
                     'title' => $this->l('Save'),
@@ -975,7 +975,6 @@ class PayU extends PaymentModule
             $controller === 'order-detail' ||
             $controller === 'guest-tracking' ||
             $controller === 'history'
-            //$controller === 'order-confirmation'
         ) {
             if ($this->is17()) {
                 $this->context->controller->registerStylesheet(
@@ -996,7 +995,7 @@ class PayU extends PaymentModule
                 'payuSFEnabled' => Configuration::get('PAYU_CARD_PAYMENT_WIDGET') === '1' ? true : false,
             ]);
         }
-        else if ($controller === 'order-confirmation') {
+        else if ($controller === 'order-confirmation' && $this->is17()) {
             $this->context->controller->registerStylesheet(
                 'preloader-css',
                 'modules/' . $this->name . '/css/preloader.css'
@@ -2840,7 +2839,7 @@ class PayU extends PaymentModule
         }
         $this->context->smarty->assign([
             'payuLogo' => $this->getPayuLogo(),
-            'show_status' => Configuration::get('PAYU_PAYMENT_SHOW_STATUS')
+            'show_status' => $this->is17() ? Configuration::get('PAYU_PAYMENT_SHOW_STATUS') : '0'
         ]);
 
         return $this->fetchTemplate('views/templates/hook/paymentReturn.tpl');

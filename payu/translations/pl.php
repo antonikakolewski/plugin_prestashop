@@ -152,6 +152,7 @@ $_MODULE['<{payu}prestashop>conditions17_48c85d60e249e5176d4aba1491154ed8'] = 'h
 $_MODULE['<{payu}prestashop>conditions17_c4a11d9e2fc72c306231560f7ae5eea6'] = 'Polityce Prywatności';
 $_MODULE['<{payu}prestashop>secureformjs_d425d2ed80e40301dfa55849a1253bd2'] = 'Wystąpił płąd podczas próby użycia karty';
 $_MODULE['<{payu}prestashop>paymentreturn_ec757f2cca8777fc4af161728e81a147'] = 'Dziękujemy za wybranie płatności PayU.';
+$_MODULE['<{payu}prestashop>paymentreturn_414eb8a497eb28cbb9caadabedbcc398'] = 'Poczekaj na wynik płatności.';
 $_MODULE['<{payu}prestashop>paymentreturn_a2bf03b05405c5208c2a716962f48d59'] = 'Twoja płatność zakończyła się sukcesem.';
 $_MODULE['<{payu}prestashop>paymentreturn_6a20ff6a09f9b1bbcc95959057ff31bc'] = 'Twoja płatność jest przetwarzana.';
 $_MODULE['<{payu}prestashop>paymentreturn_49f369caf555b5fcede29d119067ed30'] = 'Twoja płatność nie udała się.';

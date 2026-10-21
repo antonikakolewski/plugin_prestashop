@@ -56,7 +56,6 @@ $(document).ready(function () {
                 }
                 else {
                     counter--;
-                    console.log(counter);
                 }
             }, 4000);
         }

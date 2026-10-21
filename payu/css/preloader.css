@@ -1,6 +1,5 @@
 #payu-preloader {
-  text-align: center;
-  padding-bottom: 10px;
+    text-align: center;
 }
 
 #payu-preloader > output {
@@ -15,6 +14,12 @@
     transform-origin: 50% 50%;
     width: 25px;
     height: 25px;
+}
+#status-waiting > h2{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
 @keyframes loader-rotate {

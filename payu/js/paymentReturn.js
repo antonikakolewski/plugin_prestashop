@@ -1,5 +1,5 @@
 $(document).ready(function () {
-    const statusWaitingElement = document.getElementById("status-waiting");
+    var statusWaitingElement = document.getElementById("status-waiting");
 
     function showResult(status, message) {
         status = status.toLowerCase();
@@ -36,7 +36,7 @@ $(document).ready(function () {
             return true;
         }
         else {
-            if (counter == 0) {
+            if (counter === 0) {
                 showResult(status);
                 return true;
             }
@@ -51,7 +51,7 @@ $(document).ready(function () {
         if (!isFirstFinal) {
             const interval = setInterval(async () => {
                 const isFinal = await getStatus(counter);
-                if (isFinal || counter == 0) {
+                if (isFinal || counter === 0) {
                     clearInterval(interval);
                 }
                 else {

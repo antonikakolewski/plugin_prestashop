@@ -8,9 +8,7 @@
 *}
 <div style="text-align: center">
     <div><img src="{$payuLogo}"></div>
-    {if $show_status === '0'}
-        <h2>{l s='Thanks for choosing PayU payment.' mod='payu'}</h2>
-    {/if}
+    <h2>{l s='Thanks for choosing PayU payment.' mod='payu'}</h2>
     {if $show_status === '1'}
         <div id="status-waiting">
             <h2>
@@ -25,8 +23,8 @@
         <h2 id="status-result-completed" style="display: none">{l s='Your payment was successful.' mod='payu'}</h2>
         <h2 id="status-result-pending" style="display: none">{l s='Your payment is being processed.' mod='payu'}</h2>
         <h2 id="status-result-canceled" style="display: none">{l s='Your payment failed.' mod='payu'}</h2>
-        <h2 id="status-result-error" style="display: none">{l s='Unknown Error' mod='payu'}</h2>
     {/if}
+    <h2 id="status-result-error" style="display: none">{l s='Unknown Error' mod='payu'}</h2>
 </div>
 
 <script>

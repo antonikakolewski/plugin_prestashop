@@ -12,14 +12,10 @@ class PayuStatusModuleFrontController extends ModuleFrontController
     public function displayAjax()
     {
         $order = new Order(Tools::getValue('id_order'));
-        $key = $order->secure_key;
         $status = '';
 
-
-        if ($key == Tools::getValue('key')){
-            $status_id = $order->current_state;
-            
-            switch ($status_id){
+        if ($order->secure_key === Tools::getValue('key')){            
+            switch ($order->current_state){
                 case Configuration::get('PAYU_PAYMENT_STATUS_COMPLETED'):
                     $status = 'COMPLETED';
                     break;
@@ -39,6 +35,7 @@ class PayuStatusModuleFrontController extends ModuleFrontController
             'status' => $status
         ];
 
+        header('Content-Type: application/json');
         echo json_encode(
            $params
         );

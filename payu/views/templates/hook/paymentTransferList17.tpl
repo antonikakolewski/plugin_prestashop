@@ -7,14 +7,16 @@
  * http://www.payu.com
 *}
 <span class="payment-name" data-pm="transfer"></span>
-{if isset($payuNotifications.transfer)}
-    <div id="transfer-response-box" class="alert alert-warning" style="margin-bottom: 10px;">
+<div id="transfer-response-box" class="alert alert-warning"
+     style="margin-bottom: 10px;{if !isset($payuNotifications.transfer)} display: none;{/if}"
+     data-select-gateway-message="{l s='Select a payment channel' mod='payu'}">
+    {if isset($payuNotifications.transfer)}
         {foreach $payuNotifications.transfer as $error}
             {$error}
             <br>
         {/foreach}
-    </div>
-{/if}
+    {/if}
+</div>
 
 <div class="pay-methods required">
     {foreach $paymentMethods as $payment}

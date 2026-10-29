@@ -1310,6 +1310,13 @@ class PayU extends PaymentModule
 
                 if (Configuration::get('PAYU_CARD_PAYMENT_WIDGET') === '1') {
                     $cardPaymentOption->setAdditionalInformation($this->fetchTemplate('secureForm17.tpl'));
+
+                    // One-page checkout submits the payment form right after its own submit, before the card
+                    // is tokenized - so the card form renders its own button (hookDisplayPaymentByBinaries)
+                    if (!$retry && $this->isOnePageCheckoutEnabled()) {
+                        $cardPaymentOption->setBinary(true)
+                            ->setAction($this->context->link->getModuleLink($this->name, 'payment', ['payMethod' => 'card']));
+                    }
                 } else {
                     if ($retry) {
                         $cardPaymentOption->setAdditionalInformation('<span class="payment-name" data-pm="c"></span>');
@@ -1349,6 +1356,12 @@ class PayU extends PaymentModule
                     ->setModuleName($this->name)
                     ->setLogo($this->getPayuLogo('payu_google_pay.svg'))
                     ->setAction($this->context->link->getModuleLink($this->name, 'payment', ['payMethod' => 'ap']));
+
+                // One-page checkout submits the payment form right after its own submit, before Google Pay
+                // returns a token - so Google Pay uses the PayU button (hookDisplayPaymentByBinaries)
+                if (!$retry && $this->isOnePageCheckoutEnabled()) {
+                    $googlePayPaymentOption->setBinary(true);
+                }
             }
 
             $paymentOptions[] = $googlePayPaymentOption;
@@ -1383,6 +1396,11 @@ class PayU extends PaymentModule
                     ->setModuleName($this->name)
                     ->setLogo($this->getPayuLogo('payu_apple_pay.svg'))
                     ->setAction($this->context->link->getModuleLink($this->name, 'payment', ['payMethod' => 'jp']));
+
+                // the same as Google Pay - Apple Pay returns the token after one-page checkout submits
+                if (!$retry && $this->isOnePageCheckoutEnabled()) {
+                    $applePayPaymentOption->setBinary(true);
+                }
             }
 
             $paymentOptions[] = $applePayPaymentOption;
@@ -2789,7 +2807,8 @@ class PayU extends PaymentModule
             $this->registerHook('displayProductPriceBlock') &&
             $this->registerHook('displayCheckoutSubtotalDetails') &&
             $this->registerHook('displayCheckoutSummaryTop') &&
-            $this->registerHook('actionGetExtraMailTemplateVars');
+            $this->registerHook('actionGetExtraMailTemplateVars') &&
+            $this->registerHook('displayPaymentByBinaries');
 
         if (version_compare(_PS_VERSION_, '1.7', 'lt')) {
             $registerStatus &= $this->registerHook('displayPaymentEU') && $this->registerHook('payment');
@@ -2939,6 +2958,23 @@ class PayU extends PaymentModule
                 return $this->display(__FILE__, 'product.tpl');
             }
         }
+    }
+
+    public function hookDisplayPaymentByBinaries($params)
+    {
+        if (!$this->isOnePageCheckoutEnabled()) {
+            return '';
+        }
+
+        return $this->fetchTemplate('paymentBinary.tpl');
+    }
+
+    /**
+     * @return bool
+     */
+    private function isOnePageCheckoutEnabled()
+    {
+        return Module::isEnabled('ps_onepagecheckout') && Configuration::get('PS_ONE_PAGE_CHECKOUT_ENABLED');
     }
 
     public function getPayuUrl($sandbox = false)

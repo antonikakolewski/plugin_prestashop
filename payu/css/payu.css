@@ -521,3 +521,10 @@ body#checkout #payu-methods-grouped .additional-information {
 .repayment-options .additional-information {
     display: none;
 }
+
+/* One-page checkout greys out and blocks binary buttons while the form is invalid - keep the PayU button
+   active like the native one, its click shows the form errors (payu17.js showOpcValidationErrors) */
+.js-payment-binary.payu-payment-binary.opc-binary-disabled {
+    pointer-events: auto;
+    opacity: 1;
+}

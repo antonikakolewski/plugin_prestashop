@@ -28,80 +28,67 @@ $(document).ready(function () {
 });
 
 (function () {
+
     document.addEventListener("DOMContentLoaded", function () {
+        var transferResponseBox = null;
+        var currentGateway = null;
+        var paymentNotificationShown = false;
 
-        var transferResponseBox = document.getElementById('transfer-response-box');
-        var transferGateways = document.querySelectorAll('input[name=transfer_gateway_id]');
-        var currentGateway = document.querySelector('input[name=transferGateway]');
+        bindTransferGateways();
 
-        document.querySelectorAll('[name=payment-option][data-module-name=payu]').forEach(function (element) {
-            element.addEventListener('click', function (ev) {
+        if (prestashop.is_one_page_checkout_enabled) {
+            // One-page checkout renders payment methods via AJAX, after DOMContentLoaded
+            prestashop.on('opcPaymentMethodsUpdated', () => {
+                bindTransferGateways();
+                addEventListenersToSubmitButton();
+                scrollToPaymentNotification();
+                initSecureForm();
+                updateBinaryButtons();
+            });
 
-                var submitButton = document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"], #secure-form-pay');
-
-                submitButton.removeEventListener('click', validateBeforeSubmitGooglePay);
-                submitButton.removeEventListener('click', validateBeforeSubmitCardForm);
-                submitButton.removeEventListener('click', validateBeforeSubmitApplePay);
-
-                var paymentElementId = ev.target.id;
-                var paymentId = paymentElementId.replace('payment-option-', '');
-                var poaiElement = document.getElementById('payment-option-' + paymentId + '-additional-information');
-                var pwpofElement = document.getElementById('pay-with-payment-option-' + paymentId + '-form');
-                var pocElement = document.getElementById('payment-option-' + paymentId + '-container');
-
-                var paymentNameElement = poaiElement ? poaiElement.querySelector('.payment-name') : null;
-
-                if (!paymentNameElement) {
-                    return;
+            document.addEventListener('change', function (e) {
+                if (e.target.matches('[name=payment-option]')) {
+                    updateBinaryButtons();
                 }
+            });
 
-                var payment = paymentNameElement.dataset.pm;
+            var binaryButton = document.getElementById('payu-binary-button');
+            if (binaryButton !== null) {
+                binaryButton.addEventListener('click', function () {
+                    var payMethod = getCheckedPayuPayMethod('.binary');
 
-                if (pocElement?.classList.contains('repayment-single')) {
-                    document.getElementById('payuRetryPayment17').querySelectorAll('.additional-information').forEach(function (el) {
-                        el.style.display = 'none';
-                    })
-                    poaiElement.style.display = 'block';
-                    document.querySelectorAll('[name=payMethod]').forEach(function (el) {
-                        el.value = payment;
-                    })
-                }
-
-                if (payment === 'transfer') {
-                    if (currentGateway !== null) {
-                        currentGateway.value = '';
+                    if (showOpcValidationErrors(getPayuBinaryBlock(payMethod))) {
+                        return;
                     }
 
-                    Array.from(document.querySelectorAll('.pay-methods__item')).forEach(function (el) {
-                        el.classList.remove('payMethodActive');
-                    });
+                    if (payMethod === 'card') {
+                        payuCardValidate();
+                    } else if (payMethod === 'ap') {
+                        payuGooglePayValidate();
+                    } else if (payMethod === 'jp') {
+                        payuApplePayValidate();
+                    }
+                });
+            }
 
-                    var paymentIdElement = pwpofElement?.querySelector('input[name=payment_id]');
+            // runs before the one-page checkout handler of its pay button
+            var isOpcFormValid = false;
+            prestashop.on('opcFormValidated', function (e) {
+                isOpcFormValid = e.isValid;
+            });
 
-                } else if (payment === 'card') {
-                    document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"]')
-                        .addEventListener('click', validateBeforeSubmitCardForm);
-
-                    var paymentIdElement = poaiElement?.querySelector('input[name=payment_id]');
-                } else if (payment === 'ap') {
-                    document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"]')
-                        .addEventListener('click', validateBeforeSubmitGooglePay);
-
-                    var paymentIdElement = poaiElement?.querySelector('input[name=payment_id]');
-                } else if (payment === "jp") {
-                    document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"]')
-                        .addEventListener('click', validateBeforeSubmitApplePay);
-
-                    var paymentIdElement = poaiElement?.querySelector('input[name=payment_id]');
+            document.addEventListener('click', function (e) {
+                // with an invalid form let one-page checkout show (and scroll to) its own errors as well
+                if (e.target.closest('#opc-pay-button') && !validateTransferGateway(isOpcFormValid)) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
                 }
-
-                if (paymentIdElement) {
-                    paymentIdElement.value = paymentElementId;
-                }
-
             }, true);
-        });
-
+        }
+        else {
+            addEventListenersToSubmitButton();
+            scrollToPaymentNotification();
+        }
         function validateBeforeSubmitGooglePay(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -133,6 +120,14 @@ $(document).ready(function () {
             return false;
         }
 
+        function validateBeforeSubmitTransfer(e) {
+            if (!validateTransferGateway(true)) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+            }
+        }
+
         function activatePaymentButton() {
             var paymentSubmit = document.querySelector('.pay-transfer-accept button');
             if (paymentSubmit !== null) {
@@ -150,8 +145,18 @@ $(document).ready(function () {
             }
         }
 
-        if (transferGateways.length > 0) {
-            transferGateways.forEach(function (gateway) {
+        function bindTransferGateways() {
+            // the card form can render a notification box with the same id
+            transferResponseBox = document.querySelector('.payment-name[data-pm=transfer] ~ #transfer-response-box')
+                || document.getElementById('transfer-response-box');
+            currentGateway = document.querySelector('input[name=transferGateway]');
+
+            document.querySelectorAll('input[name=transfer_gateway_id]').forEach(function (gateway) {
+                if (gateway.dataset.payuBound) {
+                    return;
+                }
+                gateway.dataset.payuBound = '1';
+
                 gateway.addEventListener('click', function (e) {
 
                         resetAllGatewaysActive();
@@ -175,8 +180,46 @@ $(document).ready(function () {
             });
         }
 
-        if (payuSFEnabled === true && typeof PayU !== 'undefined') {
-            var secureFormOptions = {
+        var payu = null;
+        var secureForms = null;
+        var secureFormOptions = null;
+        var secureFormNumber = null;
+        var secureFormDate = null;
+        var secureFormCvv = null;
+        var cardTokenInput = null;
+
+        initSecureForm();
+
+        function initSecureForm() {
+            var numberElement = document.getElementById('payu-card-number');
+
+            // one-page checkout renders the card form via AJAX - render the fields whenever empty containers appear
+            if (payuSFEnabled !== true || typeof PayU === 'undefined' || numberElement === null || numberElement.hasChildNodes()) {
+                return;
+            }
+
+            // the SDK allows adding each field type only once, re-rendered payment methods get the same fields
+            // (removed from the replaced elements first - render() of a rendered field does nothing)
+            if (payu === null) {
+                createSecureForms();
+                secureFormNumber = secureForms.add('number', secureFormOptions.config);
+                secureFormDate = secureForms.add('date', secureFormOptions.config);
+                secureFormCvv = secureForms.add('cvv', secureFormOptions.config);
+            } else {
+                secureFormNumber.remove();
+                secureFormDate.remove();
+                secureFormCvv.remove();
+            }
+
+            secureFormNumber.render(secureFormOptions.elementFormNumber);
+            secureFormDate.render(secureFormOptions.elementFormDate);
+            secureFormCvv.render(secureFormOptions.elementFormCvv);
+
+            cardTokenInput = document.getElementById('card-token');
+        }
+
+        function createSecureForms() {
+            secureFormOptions = {
                 elementFormNumber: '#payu-card-number',
                 elementFormDate: '#payu-card-date',
                 elementFormCvv: '#payu-card-cvv',
@@ -226,18 +269,9 @@ $(document).ready(function () {
             secureFormOptions.profile = calculateProfile();
             secureFormOptions.config = Object.assign({}, secureFormOptions.config, secureFormOptions.profiles[secureFormOptions.profile]);
 
-            var payu = PayU(payuPosId, {dev: true});
-
-            var secureForms = payu.secureForms();
-            var secureFormNumber = secureForms.add('number', secureFormOptions.config);
-            secureFormNumber.render(secureFormOptions.elementFormNumber);
-            var secureFormDate = secureForms.add('date', secureFormOptions.config);
-            secureFormDate.render(secureFormOptions.elementFormDate);
-            var secureFormCvv = secureForms.add('cvv', secureFormOptions.config);
-            secureFormCvv.render(secureFormOptions.elementFormCvv);
+            payu = PayU(payuPosId, {dev: true});
+            secureForms = payu.secureForms();
             window.addEventListener('resize', secureFormResize);
-
-            var cardTokenInput = document.getElementById('card-token');
         }
 
         function payuCardValidate() {
@@ -267,7 +301,15 @@ $(document).ready(function () {
                         document.getElementsByName('payuBrowser[language]')[0].value = navigator.language;
                         document.getElementById('waiting-box').style.display = '';
                         document.getElementById('card-form-container').style.display = 'none';
-                        if ($('.repayment-options').length > 0) {
+                        if (getPayuBinaryBlock('card') !== null) {
+                            var cardFields = {};
+                            document.querySelectorAll('#payu-card-form input[name=cardToken], #payu-card-form input[name^=payuBrowser]').forEach(function (input) {
+                                cardFields[input.name] = input.value;
+                            });
+                            submitWithOpc(cardFields, function () {
+                                showMessageBoxSecureForm(errorTitle);
+                            });
+                        } else if ($('.repayment-options').length > 0) {
                             $('.repayment-options').submit();
                         } else {
                             document.getElementById('payu-card-form').submit();
@@ -297,6 +339,7 @@ $(document).ready(function () {
         }
 
         function payuGooglePayValidate() {
+            console.log("a");
             hideMessageBoxGooglePay();
             if (!window.google?.payments?.api?.PaymentsClient) {
                 showMessageBoxGooglePay(googlePayErrorMessage);
@@ -361,7 +404,11 @@ $(document).ready(function () {
                             paymentsClient.loadPaymentData(paymentDataRequest).then(function (paymentData) {
                                 paymentToken = paymentData.paymentMethodData.tokenizationData.token;
                                 googleToken.value = btoa(paymentToken);
-                                if ($('.repayment-options').length > 0) {
+                                if (getPayuBinaryBlock('ap') !== null) {
+                                    submitWithOpc({payuGoogleToken: googleToken.value}, function () {
+                                        showMessageBoxGooglePay(googlePayErrorMessage);
+                                    });
+                                } else if ($('.repayment-options').length > 0) {
                                     $('.repayment-options').submit();
                                 } else {
                                     document.getElementById('payu-google-pay-form').submit();
@@ -378,6 +425,98 @@ $(document).ready(function () {
 
                 return false;
             } else return true;
+        }
+
+        function getCheckedPayuPayMethod(optionSelector) {
+            var paymentOption = document.querySelector('[name=payment-option][data-module-name=payu]' + optionSelector + ':checked');
+            var paymentName = paymentOption ? document.querySelector('#' + paymentOption.id + '-additional-information .payment-name') : null;
+
+            return paymentName !== null ? paymentName.dataset.pm : null;
+        }
+
+        // One-page checkout: Google Pay, Apple Pay and the card form are binary payment options with a PayU button
+        function getPayuBinaryBlock(payMethod) {
+            return payMethod !== null && getCheckedPayuPayMethod('.binary') === payMethod ? document.querySelector('.payu-payment-binary') : null;
+        }
+
+        function updateBinaryButtons() {
+            var opcPayButton = document.getElementById('opc-pay-button');
+            var binaryButton = document.getElementById('payu-binary-button');
+
+            // same label as the one-page checkout button, including the amount
+            if (opcPayButton !== null && binaryButton !== null) {
+                binaryButton.textContent = opcPayButton.textContent.trim();
+            }
+        }
+
+        // a payment error returned by payment.php, shown after the redirect back to the checkout
+        function scrollToPaymentNotification() {
+            var notification = Array.from(document.querySelectorAll('.payment-name ~ #transfer-response-box')).find(function (box) {
+                return box.offsetParent !== null && box.textContent.trim() !== '';
+            });
+
+            if (notification !== undefined && !paymentNotificationShown) {
+                paymentNotificationShown = true;
+                notification.scrollIntoView({behavior: 'smooth', block: 'center'});
+            }
+        }
+
+        function validateTransferGateway(scrollToError) {
+            if (getCheckedPayuPayMethod('') !== 'transfer' || currentGateway === null || currentGateway.value !== ''
+                || transferResponseBox === null || !transferResponseBox.dataset.selectGatewayMessage) {
+                return true;
+            }
+
+            transferResponseBox.textContent = transferResponseBox.dataset.selectGatewayMessage;
+            transferResponseBox.style.display = '';
+            if (scrollToError) {
+                transferResponseBox.scrollIntoView({behavior: 'smooth', block: 'center'});
+            }
+
+            return !scrollToError;
+        }
+
+        function showOpcValidationErrors(binaryBlock) {
+            var opcPayButton = document.getElementById('opc-pay-button');
+
+            if (binaryBlock === null || !binaryBlock.classList.contains('opc-binary-disabled')) {
+                return false;
+            }
+
+            // let one-page checkout show what is missing in the form
+            if (opcPayButton !== null) {
+                opcPayButton.click();
+            }
+
+            return true;
+        }
+
+        function submitWithOpc(fields, onError) {
+            var paymentOption = document.querySelector('[name=payment-option]:checked');
+            var paymentForm = paymentOption ? document.querySelector('#pay-with-' + paymentOption.id + '-form form') : null;
+            var opcPayButton = document.getElementById('opc-pay-button');
+
+            if (paymentForm === null || opcPayButton === null) {
+                onError();
+                return;
+            }
+
+            Object.keys(fields).forEach(function (name) {
+                var input = Array.from(paymentForm.elements).find(function (element) {
+                    return element.name === name;
+                });
+
+                if (input === undefined) {
+                    input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = name;
+                    paymentForm.appendChild(input);
+                }
+                input.value = fields[name];
+            });
+
+            // one-page checkout saves the checkout and then submits the payment form with the token
+            opcPayButton.click();
         }
 
         function payuApplePayValidate() {
@@ -453,7 +592,11 @@ $(document).ready(function () {
                 applePayToken.value = btoa(
                     JSON.stringify(event.payment.token.paymentData)
                 );
-                if ($('.repayment-options').length > 0) {
+                if (getPayuBinaryBlock('jp') !== null) {
+                    submitWithOpc({payuApplePayToken: applePayToken.value}, function () {
+                        showMessageBoxApplePay(applePayErrorMessage);
+                    });
+                } else if ($('.repayment-options').length > 0) {
                     $('.repayment-options').submit();
                 } else {
                     document.getElementById('payu-apple-pay-form').submit();
@@ -489,6 +632,7 @@ $(document).ready(function () {
             var responseBox = document.getElementById(elementId);
             responseBox.innerHTML = message;
             responseBox.style.display = '';
+            responseBox.scrollIntoView({behavior: 'smooth', block: 'center'});
         }
 
         function hideMessageBox(elementId) {
@@ -519,6 +663,102 @@ $(document).ready(function () {
 
         function hideMessageBoxApplePay() {
             hideMessageBox('response-box-apple-pay');
+        }
+
+        function addEventListenersToSubmitButton(){
+            document.querySelectorAll('[name=payment-option][data-module-name=payu]').forEach(function (element) {
+                console.log(element);
+                element.addEventListener('click', function (ev) {
+                    console.log("a");
+                    var submitButton = document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"], #secure-form-pay, #opc-pay-button');
+
+                    submitButton.removeEventListener('click', validateBeforeSubmitGooglePay);
+                    submitButton.removeEventListener('click', validateBeforeSubmitCardForm);
+                    submitButton.removeEventListener('click', validateBeforeSubmitApplePay);
+                    submitButton.removeEventListener('click', validateBeforeSubmitTransfer);
+
+                    var paymentElementId = ev.target.id;
+                    var paymentId = paymentElementId.replace('payment-option-', '');
+                    var poaiElement = document.getElementById('payment-option-' + paymentId + '-additional-information');
+                    var pwpofElement = document.getElementById('pay-with-payment-option-' + paymentId + '-form');
+                    var pocElement = document.getElementById('payment-option-' + paymentId + '-container');
+
+                    var paymentNameElement = poaiElement ? poaiElement.querySelector('.payment-name') : null;
+
+                    if (!paymentNameElement) {
+                        return;
+                    }
+
+                    var payment = paymentNameElement.dataset.pm;
+
+                    if (pocElement?.classList.contains('repayment-single')) {
+                        document.getElementById('payuRetryPayment17').querySelectorAll('.additional-information').forEach(function (el) {
+                            el.style.display = 'none';
+                        })
+                        poaiElement.style.display = 'block';
+                        document.querySelectorAll('[name=payMethod]').forEach(function (el) {
+                            el.value = payment;
+                        })
+                    }
+
+                    if (payment === 'transfer') {
+                        if (currentGateway !== null) {
+                            currentGateway.value = '';
+                        }
+
+                        Array.from(document.querySelectorAll('.pay-methods__item')).forEach(function (el) {
+                            el.classList.remove('payMethodActive');
+                        });
+
+                        // in one-page checkout the bank is checked before its own submit handler runs
+                        if (!prestashop.is_one_page_checkout_enabled) {
+                            submitButton.addEventListener('click', validateBeforeSubmitTransfer);
+                        }
+
+                        var paymentIdElement = pwpofElement?.querySelector('input[name=payment_id]');
+
+                    } else if (payment === 'card') {
+                        // in one-page checkout the card form has its own button, see binaryButton
+                        if (!ev.target.classList.contains('binary')) {
+                            document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"], #opc-pay-button')
+                                .addEventListener('click', validateBeforeSubmitCardForm);
+                        }
+
+                        var paymentIdElement = poaiElement?.querySelector('input[name=payment_id]');
+                    } else if (payment === 'ap') {
+                        console.log("a");
+                        let buttons = document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"], #opc-pay-button');
+                        console.log(buttons);
+                        // in one-page checkout Google Pay has its own button, see binaryButton
+                        if (!ev.target.classList.contains('binary')) {
+                            document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"], #opc-pay-button')
+                                .addEventListener('click', validateBeforeSubmitGooglePay);
+                        }
+
+                        var paymentIdElement = poaiElement?.querySelector('input[name=payment_id]');
+                    } else if (payment === "jp") {
+                        // in one-page checkout Apple Pay has its own button, see binaryButton
+                        if (!ev.target.classList.contains('binary')) {
+                            document.querySelector('#payment-confirmation .btn, .repayment-options input[type="submit"], #opc-pay-button')
+                                .addEventListener('click', validateBeforeSubmitApplePay);
+                        }
+
+                        var paymentIdElement = poaiElement?.querySelector('input[name=payment_id]');
+                    }
+
+                    if (paymentIdElement) {
+                        paymentIdElement.value = paymentElementId;
+                    }
+
+                }, true);
+            });
+
+            // an option preselected by the shop (e.g. after a payment error) is never clicked - run the
+            // handler above for it, a non-bubbling event does not reach other payment scripts
+            var checkedPaymentOption = document.querySelector('[name=payment-option][data-module-name=payu]:checked');
+            if (checkedPaymentOption !== null) {
+                checkedPaymentOption.dispatchEvent(new Event('click'));
+            }
         }
     })
 })();
